@@ -95,7 +95,7 @@ def print_speedup_table(m_values, n_values, results):
 
 if __name__ == "__main__":
     # You can change n_trials here if the 10k x 10k iterations take too long
-    print("Using FastPinvA from Method1ScipyPinvB.py")
-    from Method1ScipyPinvB import *
+    print("Using FastPinvA from Method0ScipyPinvB.py")
+    from Method0ScipyPinvB import *
     m_vals, n_vals, test_results = run_benchmarks(FastPinvA, n_trials=100, skip_10k = True)
     print_speedup_table(m_vals, n_vals, test_results)
