@@ -95,7 +95,7 @@ def print_speedup_table(m_values, n_values, results):
 
 if __name__ == "__main__":
     # You can change n_trials here if the 10k x 10k iterations take too long
-    print("Using FastPinv4Step from Method3Inplace_BidagViaCython.py")
-    from Method3Inplace_BidagViaCython import *
-    m_vals, n_vals, test_results = run_benchmarks(FastPinv4Step, n_trials=100, skip_10k = True)
+    print("Using FastPinv from Method3ExplicitBplusViaCython.py")
+    from Method3ExplicitBplusViaCython import * 
+    m_vals, n_vals, test_results = run_benchmarks(FastPinv, n_trials=100, skip_10k = True)
     print_speedup_table(m_vals, n_vals, test_results)

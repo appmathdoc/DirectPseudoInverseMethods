@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.linalg import pinv, norm
-from Method3ExplicitBplus import *
+from Method3ExplicitBplusViaCython import *
 import sys
 import time
 
@@ -36,11 +36,11 @@ def TestPinv(A, artificial_tol = 18.4, test_lbl = "", dest = sys.stdout,
 
     ## Time for our Method
     start_time = time.time()
-    A_pinv_fast = pinv_fast(A)
+    A_pinv_fast = FastPinv(A)
     fast_time = time.time() - start_time
 
     print(f"\nScipy linalg.pinv Execution Time: {np_time:.4f} seconds")
-    print(f"Direct  pinv_fast Execution Time: {fast_time:.4f} seconds")
+    print(f"Lanczos  FastPinv Execution Time: {fast_time:.4f} seconds")
 
     ## Print Result
     print("\nMatrix A_pinv_fast:", file = dest )
@@ -63,7 +63,7 @@ def TestPinv(A, artificial_tol = 18.4, test_lbl = "", dest = sys.stdout,
 
     return A_pinv_fast
 
-def run_random_tests(n_tests=1000, mn_bounds = (10, 1_000), rank_bound = None, 
+def run_random_tests(n_tests=1000, mn_bounds = (1_000, 100), rank_bound = None, 
                      tol=1e-7, log10_cond = 5, stop_on_fail = False):
     """
     Stress-tests the pinv_bidiagonal implementation against scipy.linalg.pinv
@@ -71,18 +71,27 @@ def run_random_tests(n_tests=1000, mn_bounds = (10, 1_000), rank_bound = None,
     """
     print(f"Running {n_tests} random tests: '.' = good, ':' = cond 1, '|' = fail")
     errs = dict()
+
+    ms = []
+    ns = []
+    rs = [] 
     
     i = 0
     while i < n_tests: 
         # 1. Randomly sample dimensions between 2 and 1000
-        m,n = np.random.randint(*mn_bounds,2)
+        m = np.random.randint(2, mn_bounds[0])
+        n = np.random.randint(2, mn_bounds[1])
         min_mn = min(m,n)
         
         if(rank_bound): 
             rank_bound = min(rank_bound,min_mn)
         else:
             rank_bound = min_mn
-        r = np.random.randint(5,rank_bound)
+        r = np.random.randint(min(5,rank_bound//2),rank_bound)
+        ms.append(m)
+        ns.append(n)
+        rs.append(r)
+        
         A = np.random.randn(m, r) @ np.random.randn(r, n) 
         sci_pinv = pinv(A)
             
@@ -94,7 +103,7 @@ def run_random_tests(n_tests=1000, mn_bounds = (10, 1_000), rank_bound = None,
 
         # 5. Compute both pseudoinverses
         try:
-            my_pinv = pinv_fast( A)
+            my_pinv = FastPinv( A)
         except Exception as e:
             print(f"\nCrash at iteration {i} (Shape: {m}x{n}): {e}")
             print("Matrix A:")
@@ -126,8 +135,17 @@ def run_random_tests(n_tests=1000, mn_bounds = (10, 1_000), rank_bound = None,
             print(f" {i} iterations thus far")
             
     else:
-        print(f"\nAll {n_tests} tests completed successfully!")
-        print("Check errs for information: errs[key] = (A,r,diff,cond1_test)")
+        ms = np.array(ms)
+        ns = np.array(ns)
+        rs = np.array(rs)
+        hw = ms/ns
+        
+        print(f"\nAll {n_tests} tests completed. ")
+        print(f"\nm range: {ms.min()} to {ms.max()}")
+        print(f"n range: {ns.min()} to {ns.max()}")
+        print(f"Height to Width Ratio Range:  {hw.min():.4f} to {hw.max():.4f}")
+        print(f"\nRank range: {rs.min()} to {rs.max()}")
+        print("\n\nCheck errs for information: errs[key] = (A,r,diff,cond1_test)")
     return errs
     
 if __name__ == "__main__":
@@ -206,4 +224,4 @@ if __name__ == "__main__":
     ## Random Testing 
     # You can call this directly. 
     # (Default tolerance set to 1e-7 due to floating point accumulation in 1000x1000 matrices)
-    errs = run_random_tests(n_tests=1000, tol=1e-7, rank_bound = 30)
+    errs = run_random_tests(n_tests=1000, tol=1e-7, rank_bound = 50)
